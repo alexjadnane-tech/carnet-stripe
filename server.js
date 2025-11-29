@@ -86,7 +86,7 @@ app.post('/create-checkout-session', async (req, res) => {
       line_items: [{
         price_data: {
           currency: 'chf',
-          product_data: { name: `Carnet édition #${edition}` },
+          product_data: { name: `edition #${edition}` },
           unit_amount: 700, // 7 CHF
         },
         quantity: 1,
