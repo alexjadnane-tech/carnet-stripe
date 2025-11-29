@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BUY BUY BUY</title>
+  <title>BUY BOOK !</title>
   <style>
     body {
       font-family: Helvetica, Arial, sans-serif;
@@ -42,7 +42,7 @@
       cursor: pointer;
       font-size: 14px;
       font-weight: bold;
-      transition: transform 0.2s, opacity 0.2s, border 0.2s;
+      transition: transform 0.2s, border 0.2s;
       border: 2px solid transparent;
     }
 
@@ -55,7 +55,9 @@
     }
 
     .sold {
-      display: none; /* edition sold → disappear */
+      background: white;
+      color: white;
+      cursor: not-allowed;
     }
 
     #payBtn {
@@ -85,7 +87,7 @@
 
 <body>
 
-  <h1>GET YOUR BOOK !</h1>
+  <h1>GET ZINE 1 !</h1>
   <p>click on a square to select an edition...</p>
 
   <div id="grid"></div>
@@ -98,7 +100,7 @@
     const loader = document.getElementById("loader");
     const payBtn = document.getElementById("payBtn");
 
-    const TOTAL_EDITIONS = 200; // total editions
+    const TOTAL_EDITIONS = 200;
     let selectedEdition = null;
 
     // Load sold editions from API
@@ -117,13 +119,15 @@
       grid.innerHTML = "";
 
       for (let i = 1; i <= TOTAL_EDITIONS; i++) {
-        if (soldList.includes(i)) continue; // sold → disappear
-
         const div = document.createElement("div");
-        div.className = "square";
         div.textContent = i;
 
-        div.onclick = () => selectEdition(div, i);
+        if (soldList.includes(i)) {
+          div.className = "square sold";
+        } else {
+          div.className = "square";
+          div.onclick = () => selectEdition(div, i);
+        }
 
         grid.appendChild(div);
       }
@@ -131,18 +135,16 @@
 
     // Select an edition
     function selectEdition(div, edition) {
-      // remove previous selection
       const prev = document.querySelector(".square.selected");
       if (prev) prev.classList.remove("selected");
 
       div.classList.add("selected");
       selectedEdition = edition;
 
-      // show Pay button
       payBtn.style.display = "inline-block";
     }
 
-    // Buy the selected edition → Stripe Checkout
+    // Buy the selected edition
     async function buy() {
       if (!selectedEdition) return;
 
@@ -165,7 +167,7 @@
           return;
         }
 
-        window.location = data.url; // redirect to Stripe
+        window.location = data.url;
       } catch (err) {
         loader.style.display = "none";
         payBtn.disabled = false;
