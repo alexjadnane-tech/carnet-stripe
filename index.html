@@ -35,9 +35,10 @@
       transition: all 0.2s;
     }
 
+    /* Correction : rendre les éditions vendues visibles (gris clair) */
     .edition.sold {
-      background-color: white;
-      color: rgb(255, 255, 255);
+      background-color: #e0e0e0;
+      color: #666;
       cursor: not-allowed;
     }
 
@@ -79,18 +80,24 @@
 
 <script src="https://js.stripe.com/v3/"></script>
 <script>
-  const stripe = Stripe("pk_test_51SYWacEy5ypgX29m3MVYntr0LM73kfAvyUZ97sYRus6kWTW1ZyZ1YwrGGO7he3mfwtIx1VG8iU4uqTkJQe78xp3J00aQrSLadU"); // clé publique Stripe
+  const stripe = Stripe("pk_test_51SYWacEy5ypgX29m3MVYntr0LM73kfAvyUZ97sYRus6kWTW1ZyZ1YwrGGO7he3mfwtIx1VG8iU4uqTkJQe78xp3J00aQrSLadU");
   let selectedEdition = null;
 
   // Récupérer éditions vendues
   async function fetchSoldEditions() {
     const res = await fetch('/sold-editions');
+    if (!res.ok) {
+      console.error('Échec récupération sold-editions', res.status);
+      return [];
+    }
     return await res.json();
   }
 
   // Générer la grille
   async function generateGrid() {
     const sold = await fetchSoldEditions();
+    // Normaliser en nombres pour éviter les problèmes de type
+    const soldNums = sold.map(x => Number(x));
     const grid = document.getElementById('grid');
 
     for (let i = 1; i <= 200; i++) {
@@ -99,7 +106,7 @@
       div.textContent = i;
       div.dataset.edition = i;
 
-      if (sold.includes(i)) {
+      if (soldNums.includes(i)) {
         div.classList.add('sold');
       }
 
@@ -122,7 +129,6 @@
 
   generateGrid();
 
-  // Payer
   document.getElementById('payButton').addEventListener('click', async () => {
     if(!selectedEdition) return;
 
@@ -140,7 +146,6 @@
         return;
       }
 
-      // Use direct URL redirect (more reliable than Stripe.js redirect)
       if (session.url) {
         window.location.href = session.url;
       } else {
