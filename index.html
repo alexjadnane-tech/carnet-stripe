@@ -5,13 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BUY BOOK !</title>
   <style>
-    body {
-      font-family: Helvetica, Arial, sans-serif;
+    html, body {
       margin: 0;
-      padding: 30px;
-      background: #ffffff;
-      text-align: center;
+      padding: 0;
+      background-color: #ffffff;
+      font-family: Helvetica, Arial, sans-serif;
       color: #000;
+      text-align: center;
+    }
+
+    body {
+      padding: 30px;
     }
 
     h1 {
@@ -29,6 +33,7 @@
       gap: 8px;
       max-width: 600px;
       margin: 0 auto 30px;
+      background: transparent;
     }
 
     .square {
@@ -57,6 +62,7 @@
     .sold {
       background: white;
       color: white;
+      border: 1px solid #ddd; /* légère bordure pour distinguer sur fond blanc */
       cursor: not-allowed;
     }
 
@@ -66,7 +72,7 @@
       font-size: 16px;
       font-family: Helvetica, Arial, sans-serif;
       cursor: pointer;
-      background-color: ##ff00e1;
+      background-color: #f200ff;
       color: white;
       border: none;
       border-radius: 5px;
@@ -88,7 +94,7 @@
 <body>
 
   <h1>GET ZINE 1 !</h1>
-  <p>click on a square to select an edition...</p>
+  <p>Click on a square to select an edition...</p>
 
   <div id="grid"></div>
 
