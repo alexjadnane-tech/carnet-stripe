@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Choose Your Book</title>
+  <title>Choose Your Edition</title>
   <style>
     body {
       font-family: Helvetica, Arial, sans-serif;
@@ -19,7 +19,7 @@
     }
 
     p {
-      margin-bottom: 30px;
+      margin-bottom: 20px;
       font-size: 16px;
     }
 
@@ -28,7 +28,7 @@
       grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
       gap: 8px;
       max-width: 600px;
-      margin: 0 auto;
+      margin: 0 auto 30px;
     }
 
     .square {
@@ -42,16 +42,37 @@
       cursor: pointer;
       font-size: 14px;
       font-weight: bold;
-      transition: transform 0.2s, opacity 0.2s;
+      transition: transform 0.2s, opacity 0.2s, border 0.2s;
+      border: 2px solid transparent;
     }
 
     .square:hover {
       transform: scale(1.1);
     }
 
+    .square.selected {
+      border: 2px solid #00bfff;
+    }
+
     .sold {
-      /* Instead of dark, it disappears completely */
+      display: none; /* edition sold → disappear */
+    }
+
+    #payBtn {
       display: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      font-family: Helvetica, Arial, sans-serif;
+      cursor: pointer;
+      background-color: #00bfff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      transition: 0.2s;
+    }
+
+    #payBtn:hover {
+      background-color: #0095cc;
     }
 
     #loader {
@@ -64,17 +85,21 @@
 
 <body>
 
-  <h1>Choose Your Book</h1>
+  <h1>Choose Your Edition</h1>
   <p>Click on a square to select an edition</p>
 
   <div id="grid"></div>
+
+  <button id="payBtn">Pay</button>
   <div id="loader">Processing your payment…</div>
 
   <script>
     const grid = document.getElementById("grid");
     const loader = document.getElementById("loader");
+    const payBtn = document.getElementById("payBtn");
 
     const TOTAL_EDITIONS = 200; // total editions
+    let selectedEdition = null;
 
     // Load sold editions from API
     async function loadSold() {
@@ -92,43 +117,63 @@
       grid.innerHTML = "";
 
       for (let i = 1; i <= TOTAL_EDITIONS; i++) {
-        if (soldList.includes(i)) continue; // skip sold editions (disappears)
+        if (soldList.includes(i)) continue; // sold → disappear
 
         const div = document.createElement("div");
         div.className = "square";
         div.textContent = i;
-        div.onclick = () => buy(i);
+
+        div.onclick = () => selectEdition(div, i);
 
         grid.appendChild(div);
       }
     }
 
-    // Buy an edition → Stripe Checkout
-    async function buy(edition) {
+    // Select an edition
+    function selectEdition(div, edition) {
+      // remove previous selection
+      const prev = document.querySelector(".square.selected");
+      if (prev) prev.classList.remove("selected");
+
+      div.classList.add("selected");
+      selectedEdition = edition;
+
+      // show Pay button
+      payBtn.style.display = "inline-block";
+    }
+
+    // Buy the selected edition → Stripe Checkout
+    async function buy() {
+      if (!selectedEdition) return;
+
       loader.style.display = "block";
+      payBtn.disabled = true;
 
       try {
         const res = await fetch("/api/create-checkout-session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ edition }),
+          body: JSON.stringify({ edition: selectedEdition }),
         });
 
         const data = await res.json();
 
         if (data.error) {
           loader.style.display = "none";
+          payBtn.disabled = false;
           alert(data.error);
           return;
         }
 
-        // Redirect to Stripe Checkout
-        window.location = data.url;
+        window.location = data.url; // redirect to Stripe
       } catch (err) {
         loader.style.display = "none";
+        payBtn.disabled = false;
         alert("An error occurred. Please try again.");
       }
     }
+
+    payBtn.addEventListener("click", buy);
 
     // Initialize
     (async () => {
