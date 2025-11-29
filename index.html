@@ -1,58 +1,61 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Choose your book :)</title>
+  <title>Choose Your Book</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: Helvetica, Arial, sans-serif;
       margin: 0;
       padding: 30px;
       background: #f5f5f5;
       text-align: center;
+      color: #000;
     }
 
     h1 {
-      margin-bottom: 20px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      margin-bottom: 30px;
+      font-size: 16px;
     }
 
     #grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+      gap: 8px;
       max-width: 600px;
-      margin: 0 auto 40px;
+      margin: 0 auto;
     }
 
     .square {
-      width: 70px;
-      height: 70px;
-      background: white;
-      border: 2px solid black;
+      width: 40px;
+      height: 40px;
+      background: black;
+      color: white;
       display: flex;
       justify-content: center;
       align-items: center;
       cursor: pointer;
-      font-size: 18px;
+      font-size: 14px;
       font-weight: bold;
-      transition: 0.2s;
+      transition: transform 0.2s, opacity 0.2s;
     }
 
     .square:hover {
       transform: scale(1.1);
-      background: #eee;
     }
 
     .sold {
-      background: black;
-      color: white;
-      cursor: not-allowed;
-      opacity: 0.6;
+      /* Instead of dark, it disappears completely */
+      display: none;
     }
 
     #loader {
-      font-size: 18px;
+      font-size: 16px;
       margin-top: 20px;
       display: none;
     }
@@ -61,51 +64,46 @@
 
 <body>
 
-  <h1>choose your book :)</h1>
-  <p>click on a square to choose a print</p>
+  <h1>Choose Your Book</h1>
+  <p>Click on a square to select an edition</p>
 
   <div id="grid"></div>
-
   <div id="loader">Processing your payment…</div>
 
   <script>
     const grid = document.getElementById("grid");
     const loader = document.getElementById("loader");
 
-    const TOTAL_EDITIONS = 100; // nombre total d’éditions
+    const TOTAL_EDITIONS = 100; // total editions
 
-    // ------------------------------------------------------------
-    // 1) Charger les éditions déjà vendues
-    // ------------------------------------------------------------
+    // Load sold editions from API
     async function loadSold() {
-      const res = await fetch("/api/sold-editions");
-      return res.json();
+      try {
+        const res = await fetch("/api/sold-editions");
+        return await res.json();
+      } catch (err) {
+        console.error("Failed to load sold editions", err);
+        return [];
+      }
     }
 
-    // ------------------------------------------------------------
-    // 2) Afficher la grille de 1 → TOTAL_EDITIONS
-    // ------------------------------------------------------------
+    // Render the grid
     function renderGrid(soldList) {
       grid.innerHTML = "";
 
       for (let i = 1; i <= TOTAL_EDITIONS; i++) {
+        if (soldList.includes(i)) continue; // skip sold editions (disappears)
+
         const div = document.createElement("div");
         div.className = "square";
         div.textContent = i;
-
-        if (soldList.includes(i)) {
-          div.classList.add("sold");
-        } else {
-          div.onclick = () => buy(i);
-        }
+        div.onclick = () => buy(i);
 
         grid.appendChild(div);
       }
     }
 
-    // ------------------------------------------------------------
-    // 3) Acheter une édition → Stripe Checkout
-    // ------------------------------------------------------------
+    // Buy an edition → Stripe Checkout
     async function buy(edition) {
       loader.style.display = "block";
 
@@ -124,18 +122,15 @@
           return;
         }
 
-        // Redirection vers Stripe Checkout
+        // Redirect to Stripe Checkout
         window.location = data.url;
-
       } catch (err) {
         loader.style.display = "none";
-        alert("Une erreur est survenue.");
+        alert("An error occurred. Please try again.");
       }
     }
 
-    // ------------------------------------------------------------
-    // Initialisation
-    // ------------------------------------------------------------
+    // Initialize
     (async () => {
       const sold = await loadSold();
       renderGrid(sold);
