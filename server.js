@@ -112,38 +112,39 @@ app.post('/create-checkout-session', async (req, res) => {
 
   try {
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [{
-        price_data: {
-          currency: 'chf',
-          product_data: { name: `édition #${edition}` },
-          unit_amount: 700, // 7 CHF
-        },
-        quantity: 1,
-      }],
-      mode: 'payment',
-      success_url: `${process.env.BASE_URL}/success?edition=${edition}`,
-      cancel_url: `${process.env.BASE_URL}/cancel`,
+  payment_method_types: ['card'],
+  line_items: [{
+    price_data: {
+      currency: 'chf',
+      product_data: { name: `édition #${edition}` },
+      unit_amount: 700, // 7 CHF
+    },
+    quantity: 1,
+  }],
+  mode: 'payment',
 
-      billing_address_collection: 'required',
-      shipping_address_collection: {
-        allowed_countries: ['CH','FR','DE','IT']
-      },
+  // URLs pointant vers les fichiers statiques
+  success_url: `${process.env.BASE_URL}/success.html?edition=${edition}`,
+  cancel_url: `${process.env.BASE_URL}/cancel.html`,
 
-      metadata: { edition: String(edition) },
+  billing_address_collection: 'required',
+  shipping_address_collection: {
+    allowed_countries: ['CH','FR','DE','IT']
+  },
 
-      // Champ commentaire facultatif
-      custom_fields: [
-        {
-          key: 'comment',
-          label: { type: 'custom', custom: 'Optional comment' },
-          type: 'text',
-          optional: true
-        }
-      ],
+  metadata: { edition: String(edition) },
 
-      allow_promotion_codes: true
-    });
+  custom_fields: [
+    {
+      key: 'comment',
+      label: { type: 'custom', custom: 'Optional comment' },
+      type: 'text',
+      optional: true
+    }
+  ],
+
+  allow_promotion_codes: true
+});
 
     res.json({ id: session.id, url: session.url });
   } catch (err) {
