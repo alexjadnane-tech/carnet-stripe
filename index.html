@@ -1,117 +1,160 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Boutique - Carnet</title>
+  <meta charset="UTF-8">
+  <title>choose your book :)</title>
   <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; padding: 20px; max-width: 720px; margin: auto; }
-    label { display:block; margin-top:12px; }
-    select, textarea, input { width:100%; padding:8px; font-size:16px; margin-top:6px; box-sizing:border-box; }
-    button { margin-top:12px; padding:10px 16px; font-size:16px; }
-    .sold { color:#999; }
-    .message { margin-top:12px; }
+    body {
+      font-family: Helvetica, sans-serif;
+      margin: 2rem;
+      background-color: #ffffff;
+      color: #000000;
+      text-align: center;
+    }
+    h1 { margin-bottom: 20px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(20, 40px);
+      grid-gap: 4px;
+      justify-content: center;
+    }
+
+    .edition {
+      width: 40px;
+      height: 40px;
+      background-color: black;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 12px;
+      border: 1px solid #333;
+      user-select: none;
+      transition: all 0.2s;
+    }
+
+    .edition.sold {
+      background-color: white;
+      color: rgb(255, 255, 255);
+      cursor: not-allowed;
+    }
+
+    .edition:hover:not(.sold) {
+      transform: scale(1.1);
+    }
+
+    #selectedEdition {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+
+    #payButton {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #dd00ff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    #payButton:disabled {
+      background-color: #000000;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
-  <h1>Acheter une édition</h1>
 
-  <p>Sélectionnez l'édition que vous voulez acheter, ajoutez un commentaire (facultatif) qui sera enregistré avec le paiement, puis cliquez sur "Payer".</p>
+<h1>choose your book :)</h1>
+<p>click on a square to choose a print:</p>
 
-  <form id="buyForm">
-    <label for="edition">Édition</label>
-    <select id="edition" name="edition">
-      <!-- rempli en JS -->
-    </select>
+<div class="grid" id="grid"></div>
 
-    <label for="comment">Commentaire (optionnel)</label>
-    <textarea id="comment" name="comment" rows="4" placeholder="Écrire un petit message..."></textarea>
+<div id="selectedEdition">Selected edition: <span id="editionNumber">None</span></div>
+<button id="payButton" style="display: none;">PAY!</button>
 
-    <label for="email">Email (optionnel, pour rappel)</label>
-    <input id="email" name="email" type="email" placeholder="votre@email.com" />
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+  const stripe = Stripe("pk_test_51SYWacEy5ypgX29m3MVYntr0LM73kfAvyUZ97sYRus6kWTW1ZyZ1YwrGGO7he3mfwtIx1VG8iU4uqTkJQe78xp3J00aQrSLadU"); // clé publique Stripe
+  let selectedEdition = null;
 
-    <button id="payBtn" type="submit">Payer 7.00 CHF</button>
-  </form>
+  // Récupérer éditions vendues
+  async function fetchSoldEditions() {
+    const res = await fetch('/sold-editions');
+    return await res.json();
+  }
 
-  <div class="message" id="message"></div>
+  // Générer la grille
+  async function generateGrid() {
+    const sold = await fetchSoldEditions();
+    const grid = document.getElementById('grid');
 
-  <script>
-    const editionsToShow = 12; // modifiez si vous avez plus ou moins d'éditions
-    const editionSelect = document.getElementById('edition');
-    const messageEl = document.getElementById('message');
-    const payBtn = document.getElementById('payBtn');
+    for (let i = 1; i <= 200; i++) {
+      const div = document.createElement('div');
+      div.classList.add('edition');
+      div.textContent = i;
+      div.dataset.edition = i;
 
-    // Remplir la liste d'éditions
-    function populateEditions(sold = []) {
-      editionSelect.innerHTML = '';
-      for (let i = 1; i <= editionsToShow; i++) {
-        const opt = document.createElement('option');
-        opt.value = i;
-        opt.textContent = `édition #${i}`;
-        if (sold.includes(i)) {
-          opt.disabled = true;
-          opt.textContent += ' — VENDUE';
-          opt.classList.add('sold');
-        }
-        editionSelect.appendChild(opt);
+      if (sold.includes(i)) {
+        div.classList.add('sold');
       }
+
+      div.addEventListener('click', () => {
+        if(div.classList.contains('sold')) return;
+
+        // Désélectionner tous
+        document.querySelectorAll('.edition').forEach(e => e.style.borderColor = '#333');
+
+        // Sélectionner celui cliqué
+        div.style.borderColor = '#fff';
+        selectedEdition = i;
+        document.getElementById('editionNumber').textContent = i;
+        document.getElementById('payButton').style.display = 'inline-block';
+      });
+
+      grid.appendChild(div);
     }
+  }
 
-    // Charger éditions vendues depuis le serveur
-    async function loadSold() {
-      try {
-        const res = await fetch('/sold-editions');
-        if (!res.ok) throw new Error('Erreur lors du chargement des éditions vendues');
-        const sold = await res.json();
-        populateEditions(sold);
-      } catch (err) {
-        console.error(err);
-        populateEditions([]);
+  generateGrid();
+
+  // Payer
+  document.getElementById('payButton').addEventListener('click', async () => {
+    if(!selectedEdition) return;
+
+    try {
+      const response = await fetch('/create-checkout-session', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ edition: selectedEdition })
+      });
+
+      const session = await response.json();
+
+      if(session.error){
+        alert(session.error);
+        return;
       }
+
+      // Use direct URL redirect (more reliable than Stripe.js redirect)
+      if (session.url) {
+        window.location.href = session.url;
+      } else {
+        const result = await stripe.redirectToCheckout({ sessionId: session.id });
+        if (result.error) {
+          alert(result.error.message);
+        }
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      alert('Une erreur est survenue: ' + err.message);
     }
+  });
+</script>
 
-    loadSold();
-
-    // Handler du submit
-    document.getElementById('buyForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      messageEl.textContent = '';
-      payBtn.disabled = true;
-      payBtn.textContent = 'Redirection...';
-
-      const edition = editionSelect.value;
-      const comment = document.getElementById('comment').value || '';
-      // email n'est pas directement utilisé côté serveur pour Stripe (Stripe collectera l'email via checkout),
-      // mais on peut l'envoyer si tu veux le stocker dans metadata (attention à la taille).
-      const email = document.getElementById('email').value || '';
-
-      try {
-        const res = await fetch('/create-checkout-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ edition: edition, comment: comment, email: email })
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error || 'Erreur création session');
-        }
-
-        // On redirige vers l'URL de Stripe Checkout fournie par le serveur
-        if (data.url) {
-          window.location = data.url;
-        } else if (data.id) {
-          // fallback
-          window.location = `https://checkout.stripe.com/pay/${data.id}`;
-        } else {
-          throw new Error('Pas d\'URL de session retournée');
-        }
-      } catch (err) {
-        console.error(err);
-        messageEl.textContent = 'Erreur : ' + (err.message || err);
-        payBtn.disabled = false;
-        payBtn.textContent = 'Payer 7.00 CHF';
-      }
-    });
-  </script>
 </body>
 </html>
