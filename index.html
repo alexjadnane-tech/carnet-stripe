@@ -1,165 +1,146 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>choose your book :)</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Choose your book :)</title>
   <style>
     body {
-      font-family: Helvetica, sans-serif;
-      margin: 2rem;
-      background-color: #ffffff;
-      color: #000000;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 30px;
+      background: #f5f5f5;
       text-align: center;
     }
-    h1 { margin-bottom: 20px; }
 
-    .grid {
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    #grid {
       display: grid;
-      grid-template-columns: repeat(20, 40px);
-      grid-gap: 4px;
-      justify-content: center;
+      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+      gap: 10px;
+      max-width: 600px;
+      margin: 0 auto 40px;
     }
 
-    .edition {
-      width: 40px;
-      height: 40px;
-      background-color: black;
-      color: white;
+    .square {
+      width: 70px;
+      height: 70px;
+      background: white;
+      border: 2px solid black;
       display: flex;
-      align-items: center;
       justify-content: center;
+      align-items: center;
       cursor: pointer;
-      font-size: 12px;
-      border: 1px solid #333;
-      user-select: none;
-      transition: all 0.2s;
-    }
-
-    /* Correction : rendre les éditions vendues visibles (gris clair) */
-    .edition.sold {
-      background-color: #e0e0e0;
-      color: #666;
-      cursor: not-allowed;
-    }
-
-    .edition:hover:not(.sold) {
-      transform: scale(1.1);
-    }
-
-    #selectedEdition {
-      margin-top: 20px;
       font-size: 18px;
+      font-weight: bold;
+      transition: 0.2s;
     }
 
-    #payButton {
-      margin-top: 10px;
-      padding: 10px 20px;
-      font-size: 16px;
-      background-color: #dd00ff;
+    .square:hover {
+      transform: scale(1.1);
+      background: #eee;
+    }
+
+    .sold {
+      background: black;
       color: white;
-      border: none;
-      cursor: pointer;
-      transition: all 0.2s;
+      cursor: not-allowed;
+      opacity: 0.6;
     }
 
-    #payButton:disabled {
-      background-color: #000000;
-      cursor: not-allowed;
+    #loader {
+      font-size: 18px;
+      margin-top: 20px;
+      display: none;
     }
   </style>
 </head>
+
 <body>
 
-<h1>choose your book :)</h1>
-<p>click on a square to choose a print:</p>
+  <h1>choose your book :)</h1>
+  <p>click on a square to choose a print</p>
 
-<div class="grid" id="grid"></div>
+  <div id="grid"></div>
 
-<div id="selectedEdition">Selected edition: <span id="editionNumber">None</span></div>
-<button id="payButton" style="display: none;">PAY!</button>
+  <div id="loader">Processing your payment…</div>
 
-<script src="https://js.stripe.com/v3/"></script>
-<script>
-  const stripe = Stripe("pk_test_51SYWacEy5ypgX29m3MVYntr0LM73kfAvyUZ97sYRus6kWTW1ZyZ1YwrGGO7he3mfwtIx1VG8iU4uqTkJQe78xp3J00aQrSLadU");
-  let selectedEdition = null;
+  <script>
+    const grid = document.getElementById("grid");
+    const loader = document.getElementById("loader");
 
-  // Récupérer éditions vendues
-  async function fetchSoldEditions() {
-    const res = await fetch('/sold-editions');
-    if (!res.ok) {
-      console.error('Échec récupération sold-editions', res.status);
-      return [];
+    const TOTAL_EDITIONS = 100; // nombre total d’éditions
+
+    // ------------------------------------------------------------
+    // 1) Charger les éditions déjà vendues
+    // ------------------------------------------------------------
+    async function loadSold() {
+      const res = await fetch("/api/sold-editions");
+      return res.json();
     }
-    return await res.json();
-  }
 
-  // Générer la grille
-  async function generateGrid() {
-    const sold = await fetchSoldEditions();
-    // Normaliser en nombres pour éviter les problèmes de type
-    const soldNums = sold.map(x => Number(x));
-    const grid = document.getElementById('grid');
+    // ------------------------------------------------------------
+    // 2) Afficher la grille de 1 → TOTAL_EDITIONS
+    // ------------------------------------------------------------
+    function renderGrid(soldList) {
+      grid.innerHTML = "";
 
-    for (let i = 1; i <= 200; i++) {
-      const div = document.createElement('div');
-      div.classList.add('edition');
-      div.textContent = i;
-      div.dataset.edition = i;
+      for (let i = 1; i <= TOTAL_EDITIONS; i++) {
+        const div = document.createElement("div");
+        div.className = "square";
+        div.textContent = i;
 
-      if (soldNums.includes(i)) {
-        div.classList.add('sold');
-      }
-
-      div.addEventListener('click', () => {
-        if(div.classList.contains('sold')) return;
-
-        // Désélectionner tous
-        document.querySelectorAll('.edition').forEach(e => e.style.borderColor = '#333');
-
-        // Sélectionner celui cliqué
-        div.style.borderColor = '#fff';
-        selectedEdition = i;
-        document.getElementById('editionNumber').textContent = i;
-        document.getElementById('payButton').style.display = 'inline-block';
-      });
-
-      grid.appendChild(div);
-    }
-  }
-
-  generateGrid();
-
-  document.getElementById('payButton').addEventListener('click', async () => {
-    if(!selectedEdition) return;
-
-    try {
-      const response = await fetch('/create-checkout-session', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ edition: selectedEdition })
-      });
-
-      const session = await response.json();
-
-      if(session.error){
-        alert(session.error);
-        return;
-      }
-
-      if (session.url) {
-        window.location.href = session.url;
-      } else {
-        const result = await stripe.redirectToCheckout({ sessionId: session.id });
-        if (result.error) {
-          alert(result.error.message);
+        if (soldList.includes(i)) {
+          div.classList.add("sold");
+        } else {
+          div.onclick = () => buy(i);
         }
+
+        grid.appendChild(div);
       }
-    } catch (err) {
-      console.error('Error:', err);
-      alert('Une erreur est survenue: ' + err.message);
     }
-  });
-</script>
+
+    // ------------------------------------------------------------
+    // 3) Acheter une édition → Stripe Checkout
+    // ------------------------------------------------------------
+    async function buy(edition) {
+      loader.style.display = "block";
+
+      try {
+        const res = await fetch("/api/create-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ edition }),
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+          loader.style.display = "none";
+          alert(data.error);
+          return;
+        }
+
+        // Redirection vers Stripe Checkout
+        window.location = data.url;
+
+      } catch (err) {
+        loader.style.display = "none";
+        alert("Une erreur est survenue.");
+      }
+    }
+
+    // ------------------------------------------------------------
+    // Initialisation
+    // ------------------------------------------------------------
+    (async () => {
+      const sold = await loadSold();
+      renderGrid(sold);
+    })();
+  </script>
 
 </body>
 </html>
