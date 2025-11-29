@@ -124,7 +124,7 @@ app.post('/create-checkout-session', async (req, res) => {
   mode: 'payment',
 
   // URLs pointant vers les fichiers statiques
-  success_url: `${process.env.BASE_URL}/success.html?edition=${edition}`,
+  success_url: `${process.env.BASE_URL}/success.html`,
   cancel_url: `${process.env.BASE_URL}/cancel.html`,
 
   billing_address_collection: 'required',
