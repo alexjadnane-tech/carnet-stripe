@@ -1,195 +1,117 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BUY BOOK !</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Boutique - Carnet</title>
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      background-color: #ffffff;
-      font-family: Helvetica, Arial, sans-serif;
-      color: #000;
-      text-align: center;
-    }
-
-    body {
-      padding: 30px;
-    }
-
-    h1 {
-      margin-bottom: 10px;
-    }
-
-    p {
-      margin-bottom: 20px;
-      font-size: 16px;
-    }
-
-    /* Grille plus horizontale : on force 20 colonnes max pour faire plus de lignes longues */
-    #grid {
-      display: grid;
-      grid-template-columns: repeat(20, 40px);
-      gap: 8px;
-      justify-content: center; /* centrage horizontal */
-      margin: 0 auto 30px;
-    }
-
-    .square {
-      width: 30px;
-      height: 30px;
-      background: black;
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      font-size: 10px;
-      font-weight: bold;
-      transition: transform 0.2s, border 0.2s;
-      border: 2px solid transparent;
-    }
-
-    .square:hover {
-      transform: scale(1.1);
-    }
-
-    .square.selected {
-      border: 2px solid #00bfff;
-    }
-
-    .sold {
-      background: white;
-      color: white;
-      border: 0px solid #ffffff;
-      cursor: not-allowed;
-    }
-
-    #payBtn {
-      display: none;
-      padding: 12px 30px;
-      font-size: 18px;
-      font-family: Helvetica, Arial, sans-serif;
-      cursor: pointer;
-      background-color: #f200ff; /* rose fluo */
-      color: white;
-      border: none;
-      border-radius: 5px;
-      font-weight: bold;
-      transition: 0.2s;
-    }
-
-    #payBtn:hover {
-      background-color: #e600e6; /* légèrement plus foncé au hover */
-    }
-
-    #loader {
-      font-size: 16px;
-      margin-top: 20px;
-      display: none;
-    }
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; padding: 20px; max-width: 720px; margin: auto; }
+    label { display:block; margin-top:12px; }
+    select, textarea, input { width:100%; padding:8px; font-size:16px; margin-top:6px; box-sizing:border-box; }
+    button { margin-top:12px; padding:10px 16px; font-size:16px; }
+    .sold { color:#999; }
+    .message { margin-top:12px; }
   </style>
 </head>
-
 <body>
+  <h1>Acheter une édition</h1>
 
-  <h1>GET ZINE 1 !</h1>
-  <p>Click on a square to select an edition...</p>
+  <p>Sélectionnez l'édition que vous voulez acheter, ajoutez un commentaire (facultatif) qui sera enregistré avec le paiement, puis cliquez sur "Payer".</p>
 
-  <div id="grid"></div>
+  <form id="buyForm">
+    <label for="edition">Édition</label>
+    <select id="edition" name="edition">
+      <!-- rempli en JS -->
+    </select>
 
-  <button id="payBtn">PAY!</button>
-  <div id="loader">Processing your payment…</div>
+    <label for="comment">Commentaire (optionnel)</label>
+    <textarea id="comment" name="comment" rows="4" placeholder="Écrire un petit message..."></textarea>
+
+    <label for="email">Email (optionnel, pour rappel)</label>
+    <input id="email" name="email" type="email" placeholder="votre@email.com" />
+
+    <button id="payBtn" type="submit">Payer 7.00 CHF</button>
+  </form>
+
+  <div class="message" id="message"></div>
 
   <script>
-    const grid = document.getElementById("grid");
-    const loader = document.getElementById("loader");
-    const payBtn = document.getElementById("payBtn");
+    const editionsToShow = 12; // modifiez si vous avez plus ou moins d'éditions
+    const editionSelect = document.getElementById('edition');
+    const messageEl = document.getElementById('message');
+    const payBtn = document.getElementById('payBtn');
 
-    const TOTAL_EDITIONS = 200;
-    let selectedEdition = null;
+    // Remplir la liste d'éditions
+    function populateEditions(sold = []) {
+      editionSelect.innerHTML = '';
+      for (let i = 1; i <= editionsToShow; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `édition #${i}`;
+        if (sold.includes(i)) {
+          opt.disabled = true;
+          opt.textContent += ' — VENDUE';
+          opt.classList.add('sold');
+        }
+        editionSelect.appendChild(opt);
+      }
+    }
 
-    // Load sold editions from API
+    // Charger éditions vendues depuis le serveur
     async function loadSold() {
       try {
-        const res = await fetch("/api/sold-editions");
-        return await res.json();
+        const res = await fetch('/sold-editions');
+        if (!res.ok) throw new Error('Erreur lors du chargement des éditions vendues');
+        const sold = await res.json();
+        populateEditions(sold);
       } catch (err) {
-        console.error("Failed to load sold editions", err);
-        return [];
+        console.error(err);
+        populateEditions([]);
       }
     }
 
-    // Render the grid
-    function renderGrid(soldList) {
-      grid.innerHTML = "";
+    loadSold();
 
-      for (let i = 1; i <= TOTAL_EDITIONS; i++) {
-        const div = document.createElement("div");
-        div.textContent = i;
-
-        if (soldList.includes(i)) {
-          div.className = "square sold";
-        } else {
-          div.className = "square";
-          div.onclick = () => selectEdition(div, i);
-        }
-
-        grid.appendChild(div);
-      }
-    }
-
-    // Select an edition
-    function selectEdition(div, edition) {
-      const prev = document.querySelector(".square.selected");
-      if (prev) prev.classList.remove("selected");
-
-      div.classList.add("selected");
-      selectedEdition = edition;
-
-      payBtn.style.display = "inline-block";
-    }
-
-    // Buy the selected edition
-    async function buy() {
-      if (!selectedEdition) return;
-
-      loader.style.display = "block";
+    // Handler du submit
+    document.getElementById('buyForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      messageEl.textContent = '';
       payBtn.disabled = true;
+      payBtn.textContent = 'Redirection...';
+
+      const edition = editionSelect.value;
+      const comment = document.getElementById('comment').value || '';
+      // email n'est pas directement utilisé côté serveur pour Stripe (Stripe collectera l'email via checkout),
+      // mais on peut l'envoyer si tu veux le stocker dans metadata (attention à la taille).
+      const email = document.getElementById('email').value || '';
 
       try {
-        const res = await fetch("/api/create-checkout-session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ edition: selectedEdition }),
+        const res = await fetch('/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ edition: edition, comment: comment, email: email })
         });
-
         const data = await res.json();
-
-        if (data.error) {
-          loader.style.display = "none";
-          payBtn.disabled = false;
-          alert(data.error);
-          return;
+        if (!res.ok) {
+          throw new Error(data.error || 'Erreur création session');
         }
 
-        window.location = data.url;
+        // On redirige vers l'URL de Stripe Checkout fournie par le serveur
+        if (data.url) {
+          window.location = data.url;
+        } else if (data.id) {
+          // fallback
+          window.location = `https://checkout.stripe.com/pay/${data.id}`;
+        } else {
+          throw new Error('Pas d\'URL de session retournée');
+        }
       } catch (err) {
-        loader.style.display = "none";
+        console.error(err);
+        messageEl.textContent = 'Erreur : ' + (err.message || err);
         payBtn.disabled = false;
-        alert("An error occurred. Please try again.");
+        payBtn.textContent = 'Payer 7.00 CHF';
       }
-    }
-
-    payBtn.addEventListener("click", buy);
-
-    // Initialize
-    (async () => {
-      const sold = await loadSold();
-      renderGrid(sold);
-    })();
+    });
   </script>
-
 </body>
 </html>
