@@ -94,10 +94,7 @@
   async function fetchSoldEditions() {
     try {
       const res = await fetch('/sold-editions');
-      if (!res.ok) {
-        console.error('Failed to fetch sold editions', res.status);
-        return [];
-      }
+      if (!res.ok) return [];
       const data = await res.json();
       return data.map(x => Number(x));
     } catch (err) {
@@ -148,7 +145,7 @@
       const response = await fetch('/create-checkout-session', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ edition: selectedEdition }) // plus de prompt pour commentaire
+        body: JSON.stringify({ edition: selectedEdition })
       });
 
       const session = await response.json();
