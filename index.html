@@ -27,13 +27,13 @@
       font-size: 16px;
     }
 
+    /* Grille plus horizontale : on force 20 colonnes max pour faire plus de lignes longues */
     #grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+      grid-template-columns: repeat(20, 40px);
       gap: 8px;
-      max-width: 600px;
+      justify-content: center; /* centrage horizontal */
       margin: 0 auto 30px;
-      background: transparent;
     }
 
     .square {
@@ -62,25 +62,26 @@
     .sold {
       background: white;
       color: white;
-      border: 1px solid #ddd; /* légère bordure pour distinguer sur fond blanc */
+      border: 1px solid #ddd;
       cursor: not-allowed;
     }
 
     #payBtn {
       display: none;
-      padding: 10px 20px;
-      font-size: 16px;
+      padding: 12px 30px;
+      font-size: 18px;
       font-family: Helvetica, Arial, sans-serif;
       cursor: pointer;
-      background-color: #f200ff;
+      background-color: #f200ff; /* rose fluo */
       color: white;
       border: none;
       border-radius: 5px;
+      font-weight: bold;
       transition: 0.2s;
     }
 
     #payBtn:hover {
-      background-color: #0095cc;
+      background-color: #e600e6; /* légèrement plus foncé au hover */
     }
 
     #loader {
@@ -98,7 +99,7 @@
 
   <div id="grid"></div>
 
-  <button id="payBtn">Pay</button>
+  <button id="payBtn">PAY!</button>
   <div id="loader">Processing your payment…</div>
 
   <script>
