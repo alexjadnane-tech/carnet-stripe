@@ -1,38 +1,38 @@
-// /api/webhook.js
 import Stripe from 'stripe';
-
-export const config = { api: { bodyParser: false } };
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-function buffer(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    req.on('data', c => chunks.push(c));
-    req.on('end', () => resolve(Buffer.concat(chunks)));
-    req.on('error', reject);
-  });
-}
+export const config = {
+  api: { bodyParser: false }, // Stripe require raw body
+};
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const sig = req.headers['stripe-signature'];
-  const raw = await buffer(req);
+  let event;
 
   try {
-    const event = stripe.webhooks.constructEvent(raw, sig, process.env.WEBHOOK_SECRET);
-
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      console.log('Payment succeeded for edition:', session.metadata?.edition);
-      // Ici on pourrait appeler un service externe (Supabase, Airtable, etc.)
-      // ou envoyer une notification. On laisse la source de vérité dans Stripe.
-    }
-
-    res.json({ received: true });
+    const buf = await buffer(req); // helper pour raw body
+    event = stripe.webhooks.constructEvent(buf, sig, process.env.WEBHOOK_SECRET);
   } catch (err) {
-    console.error('Webhook error', err.message);
-    res.status(400).send(`Webhook Error: ${err.message}`);
+    console.error('Webhook signature failed', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
   }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    console.log(`✅ Édition ${session.metadata.edition} vendue !`);
+    // Ici tu peux sauvegarder dans un DB ou fichier pour /sold-editions
+  }
+
+  res.json({ received: true });
+}
+
+async function buffer(req) {
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks);
 }
