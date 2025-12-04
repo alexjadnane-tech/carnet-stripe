@@ -16,8 +16,8 @@ export default async function handler(req, res) {
       line_items: [{
         price_data: {
           currency: 'chf',
-          product_data: { name: `Carnet édition #${edition}` },
-          unit_amount: 700,
+          product_data: { name: `Carnet edition #${edition}` },
+          unit_amount: 700, // 7 CHF
         },
         quantity: 1,
       }],
@@ -25,9 +25,16 @@ export default async function handler(req, res) {
       success_url: `${baseUrl}/success.html?edition=${edition}`,
       cancel_url: `${baseUrl}/cancel.html`,
       metadata: { edition: String(edition) },
+      
+      // Adresse et pays autorisés
       shipping_address_collection: {
         allowed_countries: ['CH', 'FR', 'DE', 'IT']
       },
+
+      // Numéro de téléphone obligatoire
+      phone_number_collection: { enabled: true },
+
+      // Commentaire optionnel
       custom_fields: [
         {
           key: 'comment',
