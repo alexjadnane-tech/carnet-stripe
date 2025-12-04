@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 
   try {
     // Base URL fixe depuis les variables d'environnement Vercel
-    const baseUrl = process.env.BASE_URL;
+    const baseUrl = process.env.BASE_URL; // https://carnet-stripe.vercel.app
     if (!baseUrl) return res.status(500).json({ error: 'BASE_URL non défini' });
 
     // Crée la session Stripe
