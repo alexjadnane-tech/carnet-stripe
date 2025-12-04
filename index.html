@@ -71,7 +71,7 @@
 
 <script src="https://js.stripe.com/v3/"></script>
 <script>
-  const stripe = Stripe("pk_test_51SYWacEy5ypgX29m3MVYntr0LM73kfAvyUZ97sYRus6kWTW1ZyZ1YwrGGO7he3mfwtIx1VG8iU4uqTkJQe78xp3J00aQrSLadU");
+  const stripe = Stripe("process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY");
   let selectedEdition = null;
 
   async function fetchSoldEditions() {
