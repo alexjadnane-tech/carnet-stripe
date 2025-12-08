@@ -12,8 +12,7 @@ export default async function handler(req, res) {
     const baseUrl = req.headers.origin || `https://${process.env.VERCEL_URL}`;
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card']
-      payment_method_types: ['twint'],
+      payment_method_types: ['card'],
       line_items: [{
         price_data: {
           currency: 'chf',
