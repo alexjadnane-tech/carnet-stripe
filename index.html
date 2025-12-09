@@ -65,90 +65,76 @@
 
 <div class="grid" id="grid"></div>
 
-<div id="selectedEdition">selected edition : <span id="editionNumber">Aucune</span></div>
+<div id="selectedEdition">
+  selected edition: <span id="editionNumber">Aucune</span>
+</div>
 <button id="payButton">PAY!</button>
 
 <script>
-  let selectedEdition = null;
+let selectedEdition = null;
+let selectedLink = null;
+let links = {};
 
-  async function fetchSoldEditions() {
-    try {
-      const res = await fetch('/sold-editions');
-      if (!res.ok) return [];
-      const data = await res.json();
-      return data.map(Number);
-    } catch (err) {
-      console.error('Erreur fetch sold-editions:', err);
-      return [];
-    }
+// Charger les liens Payrexx
+async function fetchLinks() {
+  try {
+    const res = await fetch('/links.json');
+    if (!res.ok) return {};
+    return await res.json();
+  } catch (err) {
+    console.error('Erreur fetch links.json:', err);
+    return {};
   }
+}
 
-  async function generateGrid() {
-    const sold = await fetchSoldEditions();
-    const grid = document.getElementById('grid');
-    grid.innerHTML = ''; // reset
-
-    for (let i = 1; i <= 200; i++) {
-      const div = document.createElement('div');
-      div.classList.add('edition');
-      div.textContent = i;
-      div.dataset.edition = i;
-
-      if (sold.includes(i)) div.classList.add('sold');
-
-      div.addEventListener('click', () => {
-        if(div.classList.contains('sold')) return;
-
-        document.querySelectorAll('.edition:not(.sold)').forEach(e => e.style.borderColor = '#333');
-
-        div.style.borderColor = '#fff';
-        selectedEdition = i;
-        document.getElementById('editionNumber').textContent = i;
-        document.getElementById('payButton').style.display = 'inline-block';
-      });
-
-      grid.appendChild(div);
-    }
+// Charger les éditions vendues
+async function fetchSoldEditions() {
+  try {
+    const res = await fetch('/sold-editions');
+    if (!res.ok) return [];
+    return (await res.json()).map(Number);
+  } catch (err) {
+    console.error('Erreur fetch sold-editions:', err);
+    return [];
   }
+}
 
-  generateGrid();
+// Générer la grille
+async function generateGrid() {
+  const sold = await fetchSoldEditions();
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
 
-  // Vérifier si on revient de success.html
-  const urlParams = new URLSearchParams(window.location.search);
-  const bought = urlParams.get('edition');
-  if(bought){
-    fetch('/api/mark-sold', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ edition: bought })
-    }).then(() => {
-      alert(`Merci ! Édition ${bought} achetée`);
-      generateGrid();
+  for (let i = 1; i <= 200; i++) {
+    const div = document.createElement('div');
+    div.classList.add('edition');
+    div.textContent = i;
+    div.dataset.edition = i;
+
+    // Cases indisponibles si vendues ou pas de lien
+    if (sold.includes(i) || !links[i]) {
+      div.classList.add('sold');
+    }
+
+    div.addEventListener('click', () => {
+      if(div.classList.contains('sold')) return;
+
+      // Désélectionner les autres
+      document.querySelectorAll('.edition:not(.sold)').forEach(e => e.style.borderColor = '#333');
+
+      // Sélection
+      div.style.borderColor = '#fff';
+      selectedEdition = i;
+      selectedLink = links[i];
+      document.getElementById('editionNumber').textContent = i;
+      document.getElementById('payButton').style.display = 'inline-block';
     });
+
+    grid.appendChild(div);
   }
+}
 
-  // Paiement Payrexx
-  document.getElementById('payButton').addEventListener('click', async () => {
-    if (!selectedEdition) return;
-
-    try {
-      const response = await fetch('/api/payrexx', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ edition: selectedEdition })
-      });
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert('Erreur paiement');
-      }
-    } catch (err) {
-      console.error('Payrexx error:', err);
-      alert('Une erreur est survenue : ' + err.message);
-    }
-  });
-</script>
-
-</body>
-</html>
+// Initialisation
+async function init() {
+  links = await fetchLinks();
+  await generateG
