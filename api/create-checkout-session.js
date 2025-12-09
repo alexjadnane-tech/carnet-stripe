@@ -1,6 +1,4 @@
-import Stripe from 'stripe';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -11,34 +9,38 @@ export default async function handler(req, res) {
   try {
     const baseUrl = req.headers.origin || `https://${process.env.VERCEL_URL}`;
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [{
-        price_data: {
-          currency: 'chf',
-          product_data: { name: `Carnet édition #${edition}` },
-          unit_amount: 700,
-        },
-        quantity: 1,
-      }],
-      mode: 'payment',
-      success_url: `${baseUrl}/success.html?edition=${edition}`,
-      cancel_url: `${baseUrl}/cancel.html`,
-      metadata: {
-        edition: String(edition),
-        comment: comment || '',
-        phone: phone || '',
-        shippingCountry: shippingCountry || '',
-      },
-      billing_address_collection: 'required',
-      shipping_address_collection: {
-        allowed_countries: ['CH','FR','DE','IT']
-      },
+    // Création d’un paiement Payrexx
+    const response = await fetch(`https://${process.env.PAYREXX_INSTANCE}.payrexx.com/api/v1.0/Payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: process.env.PAYREXX_API_KEY,
+        amount: 700, // CHF 7 → Payrexx demande montant en centimes
+        currency: 'CHF',
+        description: `Carnet édition #${edition}`,
+        purpose: `Edition ${edition}`,
+        success_redirect_url: `${baseUrl}/success.html?edition=${edition}`,
+        failed_redirect_url: `${baseUrl}/cancel.html`,
+        fields: {
+          name: true,
+          email: true,
+          phone: true,
+          address: true,
+          country: true,
+          comment: true
+        }
+      })
     });
 
-    res.status(200).json({ url: session.url });
+    const data = await response.json();
+
+    if (!data.data || !data.data.link) {
+      return res.status(500).json({ error: 'Erreur Payrexx', details: data });
+    }
+
+    res.status(200).json({ url: data.data.link });
   } catch (err) {
-    console.error('create-checkout-session error', err);
+    console.error('Payrexx error', err);
     res.status(500).json({ error: err.message });
   }
 }
