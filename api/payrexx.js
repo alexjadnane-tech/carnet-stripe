@@ -1,7 +1,9 @@
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
   const { edition } = req.body;
   if (!edition) return res.status(400).json({ error: 'Edition manquante' });
@@ -37,9 +39,10 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Erreur Payrexx', details: data });
     }
 
+    // Renvoie l’URL du paiement au frontend
     res.status(200).json({ url: data.data.link });
   } catch (err) {
-    console.error('Payrexx error', err);
+    console.error('Payrexx error:', err);
     res.status(500).json({ error: err.message });
   }
 }
